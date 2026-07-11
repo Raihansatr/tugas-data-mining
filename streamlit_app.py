@@ -11,16 +11,11 @@ st.title("🛍️ Aplikasi Prediksi Perilaku Pengguna (Ordered vs Not Ordered)")
 # --- 1. Load Data Ringkas & Train Model ---
 @st.cache_resource
 def train_model():
-    # JURUS PUNGKASAN: Mengambil langsung dari URL mentah GitHub agar 100% tidak FileNotFoundError!
-    # SILAKAN GANTI 'username_github_kamu' dengan username GitHub asli milikmu!
-    url = "https://raw.githubusercontent.com/username_github_kamu/tugas-data-mining/main/training_sample.csv"
+    # Menembak langsung file CSV via raw URL GitHub agar bebas dari FileNotFoundError lokal
+    url = "https://raw.githubusercontent.com/Raihansatr/tugas-data-mining/main/training_sample.csv"
     
-    try:
-        df = pd.read_csv(url, nrows=20000, sep=None, engine='python')
-    except Exception:
-        # Jika URL di atas salah ketik, sistem otomatis mencoba membaca file lokal sebagai cadangan
-        df = pd.read_csv('training_sample.csv', nrows=20000, sep=None, engine='python')
-        
+    # Membaca data langsung dari internet
+    df = pd.read_csv(url, nrows=20000, sep=None, engine='python')
     df.columns = df.columns.str.strip()
     
     fitur = [
