@@ -11,8 +11,16 @@ st.title("🛍️ Aplikasi Prediksi Perilaku Pengguna (Ordered vs Not Ordered)")
 # --- 1. Load Data Ringkas & Train Model ---
 @st.cache_resource
 def train_model():
-    # Membaca data aman dari error separator
-    df = pd.read_csv('training_sample.csv', nrows=20000, sep=None, engine='python')
+    # JURUS PUNGKASAN: Mengambil langsung dari URL mentah GitHub agar 100% tidak FileNotFoundError!
+    # SILAKAN GANTI 'username_github_kamu' dengan username GitHub asli milikmu!
+    url = "https://raw.githubusercontent.com/username_github_kamu/tugas-data-mining/main/training_sample.csv"
+    
+    try:
+        df = pd.read_csv(url, nrows=20000, sep=None, engine='python')
+    except Exception:
+        # Jika URL di atas salah ketik, sistem otomatis mencoba membaca file lokal sebagai cadangan
+        df = pd.read_csv('training_sample.csv', nrows=20000, sep=None, engine='python')
+        
     df.columns = df.columns.str.strip()
     
     fitur = [
@@ -24,22 +32,22 @@ def train_model():
         'device_computer', 'device_tablet', 'returning_user', 'loc_uk'
     ]
     
-    # Pengaman jika nama kolom bergeser
-    fitur_ada = [f for f in fitur if f in df.columns]
-    if len(fitur_ada) == 0:
+    fitur_fix = [f for f in fitur if f in df.columns]
+    if len(fitur_fix) == 0:
         X = df.iloc[:, 1:24]
         y = df.iloc[:, 24]
+        fitur_fix = list(X.columns)
     else:
-        X = df[fitur_ada]
+        X = df[fitur_fix]
         y = df['ordered'] if 'ordered' in df.columns else df.iloc[:, -1]
     
     model = RandomForestClassifier(n_estimators=20, random_state=42, max_depth=10)
     model.fit(X, y)
-    return model
+    return model, fitur_fix
 
-# Jalankan fungsi dengan animasi loading
+# Jalankan fungsi training
 with st.spinner("Sedang memuat data optimasi, mohon tunggu..."):
-    model = train_model()
+    model, fitur_training = train_model()
 st.success("Model Machine Learning siap digunakan!")
 
 # --- 2. Membuat Form Input Pengguna ---
@@ -87,7 +95,7 @@ with col3:
 st.markdown("---")
 if st.button("🚀 Jalankan Prediksi Ordered", type="primary"):
     
-    X_input = pd.DataFrame([{
+    raw_input = {
         'basket_icon_click': basket_icon_click,
         'basket_add_list': basket_add_list,
         'basket_add_detail': basket_add_detail,
@@ -111,7 +119,15 @@ if st.button("🚀 Jalankan Prediksi Ordered", type="primary"):
         'device_tablet': device_tablet,
         'returning_user': returning_user,
         'loc_uk': loc_uk
-    }])
+    }
+    
+    X_input = pd.DataFrame([raw_input])
+    
+    for col in fitur_training:
+        if col not in X_input.columns:
+            X_input[col] = 0
+            
+    X_input = X_input[fitur_training]
     
     prediksi = model.predict(X_input)
     probabilitas = model.predict_proba(X_input)
