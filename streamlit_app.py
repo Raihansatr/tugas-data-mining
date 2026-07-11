@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
+import os
 
 # --- Set Konfigurasi Halaman ---
 st.set_page_config(page_title="Prediksi Konversi Ordered", layout="wide")
@@ -11,11 +12,11 @@ st.title("🛍️ Aplikasi Prediksi Perilaku Pengguna (Ordered vs Not Ordered)")
 # --- 1. Load Data Ringkas & Train Model ---
 @st.cache_resource
 def train_model():
-    # Menembak langsung file CSV via raw URL GitHub agar bebas dari FileNotFoundError lokal
-    url = "https://raw.githubusercontent.com/Raihansatr/tugas-data-mining/main/training_sample.csv"
+    # Menggunakan path absolut internal server Streamlit agar pasti ketemu tanpa internet
+    path_lokal = os.path.join(os.getcwd(), 'training_sample.csv')
     
-    # Membaca data langsung dari internet
-    df = pd.read_csv(url, nrows=20000, sep=None, engine='python')
+    # Membaca data lokal (20.000 baris saja agar RAM aman)
+    df = pd.read_csv(path_lokal, nrows=20000, sep=None, engine='python')
     df.columns = df.columns.str.strip()
     
     fitur = [
