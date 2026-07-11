@@ -83,7 +83,7 @@ with st.sidebar:
     st.markdown("**Dataset:** E-Commerce Clickstream Session")
     st.divider()
     st.markdown("**Kelompok Data Mining**")
-    st.caption("Naher, Syafiq, Faiq")
+    st.caption("Raihan Satria Ramadhan, Rangga Prana Mahendra Putra Y, Muhammad Thufael Amrullah, Petrus Efraim Dapa Wea")
     st.divider()
     st.subheader("🧪 Coba Skenario Cepat")
     pilihan_skenario = st.selectbox("Pilih skenario:", list(skenario.keys()))
