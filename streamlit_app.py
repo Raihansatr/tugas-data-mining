@@ -2,8 +2,6 @@ import streamlit as st
 import pandas as pd
 import pickle
 import os
-import plotly.graph_objects as go
-import plotly.express as px
 
 # --- Konfigurasi Halaman ---
 st.set_page_config(page_title="Prediksi Konversi Ordered", page_icon="🛍️", layout="wide")
@@ -79,7 +77,7 @@ with st.sidebar:
     st.markdown("**Dataset:** E-Commerce Clickstream Session")
     st.divider()
     st.markdown("**Kelompok Data Mining**")
-    st.caption("RAIHAN SATRIA RAMADHAN, RANGGA PRANA MAHENDRA PUTRA Y, MUHAMMAD THUFAEL AMRULLAH, PETRUS EFRAIM DAPA WEA")
+    st.caption("Naher, Syafiq, Faiq")
     st.divider()
     st.subheader("🧪 Coba Skenario Cepat")
     pilihan_skenario = st.selectbox("Pilih skenario:", list(skenario.keys()))
@@ -170,66 +168,49 @@ if st.button("🚀 Jalankan Prediksi Ordered", type="primary", use_container_wid
         'loc_uk': loc_uk
     }
 
-    X_input = pd.DataFrame([raw_input])
-    for col in fitur_training:
-        if col not in X_input.columns:
-            X_input[col] = 0
-    X_input = X_input[fitur_training]
+    try:
+        X_input = pd.DataFrame([raw_input])
+        for col in fitur_training:
+            if col not in X_input.columns:
+                X_input[col] = 0
+        X_input = X_input[fitur_training]
 
-    prediksi = model.predict(X_input)
-    probabilitas = model.predict_proba(X_input)
-    prob_order = probabilitas[0][1] * 100
+        prediksi = model.predict(X_input)
+        probabilitas = model.predict_proba(X_input)
+        prob_order = probabilitas[0][1] * 100
+        prob_tidak = probabilitas[0][0] * 100
 
-    st.markdown("### 🏁 Hasil Analisis Prediksi")
+        st.markdown("### 🏁 Hasil Analisis Prediksi")
 
-    res_col1, res_col2 = st.columns([1, 1])
+        res_col1, res_col2 = st.columns([1, 1])
 
-    with res_col1:
-        if prediksi[0] == 1:
-            st.success("🎉 **USER DIPREDIKSI AKAN ORDER!**")
-        else:
-            st.error("❌ **USER DIPREDIKSI TIDAK ORDER**")
+        with res_col1:
+            if prediksi[0] == 1:
+                st.success("🎉 **USER DIPREDIKSI AKAN ORDER!**")
+            else:
+                st.error("❌ **USER DIPREDIKSI TIDAK ORDER**")
 
-        fig_gauge = go.Figure(go.Indicator(
-            mode="gauge+number",
-            value=prob_order,
-            number={'suffix': "%"},
-            title={'text': "Probabilitas Order"},
-            gauge={
-                'axis': {'range': [0, 100]},
-                'bar': {'color': "#2E86DE" if prob_order >= 50 else "#EE5253"},
-                'steps': [
-                    {'range': [0, 40], 'color': "#3d1f1f"},
-                    {'range': [40, 70], 'color': "#3d3a1f"},
-                    {'range': [70, 100], 'color': "#1f3d24"},
-                ],
-                'threshold': {
-                    'line': {'color': "white", 'width': 3},
-                    'thickness': 0.75,
-                    'value': 50
-                }
-            }
-        ))
-        fig_gauge.update_layout(height=300, margin=dict(l=20, r=20, t=50, b=20))
-        st.plotly_chart(fig_gauge, use_container_width=True)
+            st.metric("Probabilitas Order", f"{prob_order:.1f}%")
+            st.progress(int(prob_order))
 
-    with res_col2:
-        st.markdown("#### 🔍 Faktor Paling Berpengaruh")
-        rf_model = model.named_steps['model']
-        importances = rf_model.feature_importances_
-        imp_df = pd.DataFrame({
-            'Fitur': [label_readable.get(f, f) for f in fitur_training],
-            'Pengaruh': importances
-        }).sort_values('Pengaruh', ascending=True).tail(8)
+            st.metric("Probabilitas Tidak Order", f"{prob_tidak:.1f}%")
+            st.progress(int(prob_tidak))
 
-        fig_bar = px.bar(
-            imp_df, x='Pengaruh', y='Fitur', orientation='h',
-            color='Pengaruh', color_continuous_scale='Blues'
-        )
-        fig_bar.update_layout(height=300, margin=dict(l=20, r=20, t=20, b=20), coloraxis_showscale=False)
-        st.plotly_chart(fig_bar, use_container_width=True)
+        with res_col2:
+            st.markdown("#### 🔍 Faktor Paling Berpengaruh")
+            rf_model = model.named_steps['model']
+            importances = rf_model.feature_importances_
+            imp_df = pd.DataFrame({
+                'Fitur': [label_readable.get(f, f) for f in fitur_training],
+                'Pengaruh': importances
+            }).sort_values('Pengaruh', ascending=False).head(8).set_index('Fitur')
 
-    st.info("📌 Grafik di atas menunjukkan 8 fitur paling berpengaruh terhadap prediksi model secara umum (berdasarkan feature importance Random Forest), bukan khusus untuk input ini saja.")
+            st.bar_chart(imp_df, horizontal=True)
+
+        st.info("📌 Grafik di atas menunjukkan 8 fitur paling berpengaruh terhadap prediksi model secara umum (berdasarkan feature importance Random Forest), bukan khusus untuk input ini saja.")
+
+    except Exception as e:
+        st.error(f"Terjadi kesalahan saat memproses prediksi: {e}")
 
 else:
     st.info("👆 Atur aktivitas pengunjung di atas (atau pilih skenario cepat di sidebar), lalu klik tombol **Jalankan Prediksi Ordered**.")
