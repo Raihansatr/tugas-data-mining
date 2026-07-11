@@ -1,7 +1,13 @@
+import os
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+
 import streamlit as st
 import pandas as pd
 import pickle
-import os
 
 # --- Konfigurasi Halaman ---
 st.set_page_config(page_title="Prediksi Konversi Ordered", page_icon="🛍️", layout="wide")
@@ -174,6 +180,11 @@ if st.button("🚀 Jalankan Prediksi Ordered", type="primary", use_container_wid
             if col not in X_input.columns:
                 X_input[col] = 0
         X_input = X_input[fitur_training]
+
+        try:
+            model.named_steps['model'].n_jobs = 1
+        except Exception:
+            pass
 
         prediksi = model.predict(X_input)
         probabilitas = model.predict_proba(X_input)
