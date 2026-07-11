@@ -2,21 +2,19 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
 
 # --- Set Konfigurasi Halaman ---
 st.set_page_config(page_title="Prediksi Konversi Ordered", layout="wide")
 
 st.title("🛍️ Aplikasi Prediksi Perilaku Pengguna (Ordered vs Not Ordered)")
-st.write("Aplikasi ini memprediksi apakah seorang pengunjung website akan melakukan pemesanan (ordered) berdasarkan aktivitas klik mereka.")
 
-# --- 1. Load Data & Train Model Otomatis ---
+# --- 1. Load Data Ringkas & Train Model ---
 @st.cache_resource
 def train_model():
-    # Membaca dataset training_sample.csv yang sudah diupload ke GitHub kamu
-    df = pd.read_csv('training_sample.csv')
+    # Membaca data aman dari error separator
+    df = pd.read_csv('training_sample.csv', nrows=20000, sep=None, engine='python')
+    df.columns = df.columns.str.strip()
     
-    # Menentukan fitur (X) dan target (y) berdasarkan kolom di datasetmu
     fitur = [
         'basket_icon_click', 'basket_add_list', 'basket_add_detail', 'sort_by',
         'image_picker', 'account_page_click', 'promo_banner_click', 'detail_wishlist_add',
@@ -26,20 +24,23 @@ def train_model():
         'device_computer', 'device_tablet', 'returning_user', 'loc_uk'
     ]
     
-    X = df[fitur]
-    y = df['ordered']
+    # Pengaman jika nama kolom bergeser
+    fitur_ada = [f for f in fitur if f in df.columns]
+    if len(fitur_ada) == 0:
+        X = df.iloc[:, 1:24]
+        y = df.iloc[:, 24]
+    else:
+        X = df[fitur_ada]
+        y = df['ordered'] if 'ordered' in df.columns else df.iloc[:, -1]
     
-    # Menggunakan sampel data 10% agar proses training di Streamlit Cloud super cepat dan tidak hang
-    X_train, _, y_train, _ = train_test_split(X, y, train_size=0.1, random_state=42, stratify=y)
-    
-    model = RandomForestClassifier(n_estimators=50, random_state=42)
-    model.fit(X_train, y_train)
-    return model, fitur
+    model = RandomForestClassifier(n_estimators=20, random_state=42, max_depth=10)
+    model.fit(X, y)
+    return model
 
-# Jalankan fungsi training otomatis saat web dibuka
-with st.spinner("Sedang memuat data dan melatih model, mohon tunggu..."):
-    model, daftar_fitur = train_model()
-st.success("Model Machine Learning berhasil dilatih dan siap digunakan!")
+# Jalankan fungsi dengan animasi loading
+with st.spinner("Sedang memuat data optimasi, mohon tunggu..."):
+    model = train_model()
+st.success("Model Machine Learning siap digunakan!")
 
 # --- 2. Membuat Form Input Pengguna ---
 st.markdown("---")
@@ -71,24 +72,21 @@ with col3:
     saw_delivery = st.selectbox("Melihat Informasi Pengiriman?", [0, 1])
     returning_user = st.selectbox("Pengguna Lama (Returning)?", [0, 1])
     
-    # Pilihan Perangkat
     device = st.radio("Perangkat yang digunakan:", ["Mobile", "Computer", "Tablet"])
     device_mobile = 1 if device == "Mobile" else 0
     device_computer = 1 if device == "Computer" else 0
     device_tablet = 1 if device == "Tablet" else 0
     
-    # Fitur pendukung (diset default agar form input tetap rapi dan ringkas)
-    checked_returns_detail = st.selectbox("Cek Detail Pengembalian?", [0, 1])
+    checked_returns_detail = 0
     saw_sizecharts = 0
     saw_account_upgrade = 0
     saw_homepage = 0
-    loc_uk = 1  # Sesuai basis data mayoritas
+    loc_uk = 1
 
-# --- 3. Proses Prediksi & Penentuan Output Ketika Tombol Diklik ---
+# --- 3. Proses Prediksi Ketika Tombol Diklik ---
 st.markdown("---")
 if st.button("🚀 Jalankan Prediksi Ordered", type="primary"):
     
-    # Menggabungkan semua input menjadi struktur data X_input (DataFrame)
     X_input = pd.DataFrame([{
         'basket_icon_click': basket_icon_click,
         'basket_add_list': basket_add_list,
@@ -115,13 +113,11 @@ if st.button("🚀 Jalankan Prediksi Ordered", type="primary"):
         'loc_uk': loc_uk
     }])
     
-    # Melakukan prediksi mutlak (0 atau 1) dan menghitung probabilitas persentase
-    prediksi = model.predict(X_input)          
-    probabilitas = model.predict_proba(X_input) 
-
+    prediksi = model.predict(X_input)
+    probabilitas = model.predict_proba(X_input)
+    
     st.subheader("🏁 Hasil Analisis Prediksi")
-
-    # Logika visual penentu label: Apakah User Ordered atau Tidak Ordered
+    
     if prediksi[0] == 1:
         st.success("🎉 **Prediksi: USER BAKAL ORDERED!**")
         st.write(f"Kemungkinan melakukan pemesanan (Ordered): **{probabilitas[0][1] * 100:.2f}%**")
